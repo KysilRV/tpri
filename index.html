@@ -33,7 +33,7 @@ h1{margin:0 0 8px;font-size:clamp(28px,4vw,46px);letter-spacing:-.04em}
 .opt input{margin-top:5px;accent-color:var(--accent)}
 .opt.correct-answer{background:rgba(34,197,94,.13);border-color:rgba(34,197,94,.65)}
 .opt.wrong-answer{background:rgba(239,68,68,.13);border-color:rgba(239,68,68,.65)}
-.expl{display:block;margin-top:16px;padding:16px;border-radius:18px;background:rgba(2,6,23,.72);border:1px solid rgba(255,255,255,.08)}
+.expl{display:none;margin-top:16px;padding:16px;border-radius:18px;background:rgba(2,6,23,.72);border:1px solid rgba(255,255,255,.08)}
 .expl b{color:#c4b5fd}
 .result{display:none;margin:28px 0 0;padding:24px;border-radius:24px;background:linear-gradient(135deg,rgba(34,197,94,.13),rgba(139,92,246,.15));border:1px solid rgba(255,255,255,.12)}
 .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px;position:sticky;bottom:18px;z-index:20}
@@ -100,7 +100,7 @@ button,.opt,input{touch-action:manipulation}
 <div class="wrap">
   <section class="hero">
     <h1>Robotika — zápočtový test 2</h1>
-    <p class="sub">Темна тема, 49 питань, варіанти відповіді як у файлі. Правильні відповіді та пояснення показані одразу. Можна все одно вибирати свої варіанти для самоперевірки.</p>
+    <p class="sub">Темна тема, 49 питань, варіанти відповіді як у файлі. Пояснення з’являться тільки після перевірки всього тесту.</p>
     <div class="stats">
       <span class="badge" id="answeredBadge">Відповіді: 0 / 49</span>
       <span class="badge">Питання: 49</span>
@@ -555,7 +555,7 @@ button,.opt,input{touch-action:manipulation}
     </article>
 
     <div class="actions">
-      <button type="button" class="primary" onclick="checkQuiz()">Порахувати результат</button>
+      <button type="button" class="primary" onclick="checkQuiz()">Показати результат</button>
       <button type="button" class="secondary" onclick="resetQuiz()">Очистити відповіді</button>
     </div>
     <div class="warn" id="warn">Ти відповів не на всі питання. Можна перевірити й так, але пропущені будуть як помилки.</div>
@@ -571,7 +571,27 @@ function updateProgress(){
   document.getElementById('bar').style.width = (answered/total*100)+'%';
   document.getElementById('warn').style.display = answered<total ? 'block' : 'none';
 }
-document.querySelectorAll('input[type=radio]').forEach(x=>x.addEventListener('change', updateProgress));
+function revealQuestion(input){
+  const card = input.closest('.q');
+  const correct = Number(card.dataset.answer);
+  const chosen = Number(input.value);
+
+  card.classList.remove('correct-card','wrong-card');
+  card.querySelectorAll('.opt').forEach(o=>o.classList.remove('correct-answer','wrong-answer'));
+
+  card.querySelector(`.opt[data-opt="${correct}"]`).classList.add('correct-answer');
+  if(chosen === correct){
+    card.classList.add('correct-card');
+  } else {
+    card.classList.add('wrong-card');
+    card.querySelector(`.opt[data-opt="${chosen}"]`).classList.add('wrong-answer');
+  }
+
+  card.querySelector('.expl').style.display = 'block';
+  updateProgress();
+}
+
+document.querySelectorAll('input[type=radio]').forEach(x=>x.addEventListener('change', e => revealQuestion(e.target)));
 function checkQuiz(){
   let score=0, answered=0;
   for(let i=1;i<=total;i++){
@@ -589,29 +609,18 @@ function checkQuiz(){
   const percent=Math.round(score/total*100);
   const result=document.getElementById('result');
   result.style.display='block';
-  result.innerHTML=`<h2 style="margin:0 0 8px">Результат: ${score} / ${total} (${percent}%)</h2><div>Пояснення відкриті під кожним питанням. Зеленим виділено правильну відповідь, червоним — твою неправильну.</div>`;
+  result.innerHTML=`<h2 style="margin:0 0 8px">Результат: ${score} / ${total} (${percent}%)</h2><div>Зеленим виділено правильну відповідь, червоним — твою неправильну. Пояснення також відкриваються одразу після вибору відповіді.</div>`;
   window.scrollTo({top:0,behavior:'smooth'});
   updateProgress();
 }
-function showAnswers(){
-  document.querySelectorAll('.q').forEach(card=>{
-    const correct = Number(card.dataset.answer);
-    const correctOpt = card.querySelector(`.opt[data-opt="${correct}"]`);
-    if(correctOpt) correctOpt.classList.add('correct-answer');
-    const expl = card.querySelector('.expl');
-    if(expl) expl.style.display = 'block';
-  });
-}
 function resetQuiz(){
   document.getElementById('quiz').reset();
-  document.querySelectorAll('.q').forEach(card=>{card.classList.remove('correct-card','wrong-card');});
-  document.querySelectorAll('.opt').forEach(o=>o.classList.remove('wrong-answer'));
-  showAnswers();
+  document.querySelectorAll('.q').forEach(card=>{card.classList.remove('correct-card','wrong-card'); card.querySelector('.expl').style.display='none';});
+  document.querySelectorAll('.opt').forEach(o=>o.classList.remove('correct-answer','wrong-answer'));
   document.getElementById('result').style.display='none';
   updateProgress();
   window.scrollTo({top:0,behavior:'smooth'});
 }
-showAnswers();
 updateProgress();
 </script>
 </body>
